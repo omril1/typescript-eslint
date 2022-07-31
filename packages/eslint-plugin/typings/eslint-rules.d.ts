@@ -141,6 +141,55 @@ declare module 'eslint/lib/rules/indent' {
   export = rule;
 }
 
+declare module 'eslint/lib/rules/key-spacing' {
+  import { TSESLint, TSESTree } from '@typescript-eslint/utils';
+  import { RuleFunction } from '@typescript-eslint/utils/dist/ts-eslint';
+
+  interface ThingOptions {
+    on?: 'colon';
+    afterColon?: boolean;
+    beforeColon?: boolean;
+    align?: 'value' | 'colon' | Omit<ThingOptions | 'align'>;
+    mode?: 'strict' | 'minimum';
+  }
+
+  type Options = [
+    {
+      beforeColon?: boolean;
+      afterColon?: boolean;
+      mode?: 'strict' | 'minimum';
+      align?: 'value' | 'colon' | Omit<ThingOptions | 'align'>;
+      multiLine?: ThingOptions;
+      singleLine?: ThingOptions;
+      overrides?: Record<
+        string,
+        {
+          beforeColon?: boolean;
+          afterColon?: boolean;
+          mode?: 'strict' | 'minimum';
+          align?: 'value' | 'colon';
+        }
+      >;
+    },
+  ];
+  type MessageIds = 'extraKey' | 'extraValue' | 'missingKey' | 'missingValue';
+
+  const rule: TSESLint.RuleModule<
+    MessageIds,
+    Options,
+    {
+      // Statements
+      ObjectExpression: RuleFunction<TSESTree.ObjectExpression>;
+      Property: RuleFunction<TSESTree.Property>;
+    }
+  > & {
+    meta: TSESLint.RuleMetaData<string> & {
+      hasSuggestions: boolean;
+    };
+  };
+  export = rule;
+}
+
 declare module 'eslint/lib/rules/keyword-spacing' {
   import { TSESLint, TSESTree } from '@typescript-eslint/utils';
   import { RuleFunction } from '@typescript-eslint/utils/dist/ts-eslint';
