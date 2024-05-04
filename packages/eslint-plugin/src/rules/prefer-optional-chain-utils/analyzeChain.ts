@@ -368,11 +368,12 @@ function getFixer(
     newCode = `!${newCode}`;
   }
 
-  const fix: ReportFixFunction = fixer =>
-    fixer.replaceTextRange(
-      [chain[0].node.range[0], lastOperand.node.range[1]],
-      newCode,
-    );
+  const fix: ReportFixFunction = fixer => {
+    const range = chain[0].startsWithIfStatment
+      ? chain[0].node.parent.range
+      : ([chain[0].node.range[0], lastOperand.node.range[1]] as const);
+    return fixer.replaceTextRange(range, newCode);
+  };
 
   return useSuggestionFixer
     ? { suggest: [{ fix, messageId: 'optionalChainSuggest' }] }

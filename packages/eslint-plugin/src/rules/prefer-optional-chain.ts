@@ -14,6 +14,7 @@ import { checkNullishAndReport } from './prefer-optional-chain-utils/checkNullis
 import type { ValidOperand } from './prefer-optional-chain-utils/gatherLogicalOperands';
 import {
   gatherLogicalOperands,
+  NullishComparisonType,
   OperandValidity,
 } from './prefer-optional-chain-utils/gatherLogicalOperands';
 import type {
@@ -168,6 +169,58 @@ export default createRule<
             },
           ],
         });
+      },
+
+      'IfStatement[consequent.body.length=1][consequent.type=BlockStatement]': (
+        node: TSESTree.IfStatement & {
+          consequent: { type: AST_NODE_TYPES.BlockStatement };
+        },
+      ): void => {
+        if (node.alternate) {
+          return;
+        }
+        if (
+          node.test.type !== AST_NODE_TYPES.Identifier &&
+          node.test.type !== AST_NODE_TYPES.MemberExpression &&
+          node.test.type !== AST_NODE_TYPES.CallExpression
+        ) {
+          return;
+        }
+        const ifBodyStatement = node.consequent.body[0];
+        const hasCommentsInIfBody =
+          context.sourceCode.getCommentsBefore(ifBodyStatement).length ||
+          context.sourceCode.getCommentsAfter(ifBodyStatement).length;
+
+        if (hasCommentsInIfBody) {
+          return;
+        }
+
+        if (ifBodyStatement.type !== AST_NODE_TYPES.ExpressionStatement) {
+          return;
+        }
+        const expression = ifBodyStatement.expression;
+        if (expression.type !== AST_NODE_TYPES.CallExpression) {
+          return;
+        }
+
+        const currentChain: ValidOperand[] = [
+          {
+            type: OperandValidity.Valid,
+            node: node.test,
+            isYoda: false,
+            comparisonType: NullishComparisonType.Boolean,
+            comparedName: node.test,
+            startsWithIfStatment: true,
+          },
+          {
+            type: OperandValidity.Valid,
+            node: expression.callee,
+            isYoda: false,
+            comparisonType: NullishComparisonType.Boolean,
+            comparedName: expression,
+          },
+        ];
+        analyzeChain(context, parserServices, options, '&&', currentChain);
       },
 
       'LogicalExpression[operator!="??"]'(

@@ -28,35 +28,6 @@ describe('|| {}', () => {
       'foo ?? {};',
       '(foo ?? {})?.bar;',
       'foo ||= bar ?? {};',
-      // https://github.com/typescript-eslint/typescript-eslint/issues/8380
-      `
-        const a = null;
-        const b = 0;
-        a === undefined || b === null || b === undefined;
-      `,
-      // https://github.com/typescript-eslint/typescript-eslint/issues/8380
-      `
-        const a = 0;
-        const b = 0;
-        a === undefined || b === undefined || b === null;
-      `,
-      // https://github.com/typescript-eslint/typescript-eslint/issues/8380
-      `
-        const a = 0;
-        const b = 0;
-        b === null || a === undefined || b === undefined;
-      `,
-      // https://github.com/typescript-eslint/typescript-eslint/issues/8380
-      `
-        const b = 0;
-        b === null || b === undefined;
-      `,
-      // https://github.com/typescript-eslint/typescript-eslint/issues/8380
-      `
-        const a = 0;
-        const b = 0;
-        b != null && a !== null && a !== undefined;
-      `,
     ],
     invalid: [
       {
@@ -719,6 +690,93 @@ describe('|| {}', () => {
   });
 });
 
+describe('if block with a single statment matches part of the condition', () => {
+  ruleTester.run('prefer-optional-chain', rule, {
+    valid: [
+      // Ignore no calls
+      noFormat`if (foo) { foo.bar; }`,
+      noFormat`if (foo) { foo.bar?.baz; }`,
+      // Ignore when comment exists before or after statement inside consequent
+      noFormat`if (foo) { /* comment */ foo.bar(); }`,
+      noFormat`if (foo) { foo.bar(); /* comment */ }`,
+      // Ignore when multiple statements exist - only single call expression statement allowed
+      `
+        if (foo) {
+          foo.bar();
+          foo.baz();
+        }
+      `,
+      // Ignore when else is used
+      `
+        declare const x: null | { a: () => string };
+        if (x) {
+          x.a();
+        } else {
+          // do something else
+        }
+      `,
+      `
+        declare const x: null | { a: () => string };
+        if (globalThis) {
+          x.a();
+        }
+      `,
+    ],
+    invalid: [
+      {
+        code: noFormat`if (foo) { foo.bar(); }`,
+        output: 'foo?.bar()',
+        errors: [
+          {
+            messageId: 'preferOptionalChain',
+            suggestions: null,
+          },
+        ],
+      },
+      {
+        code: noFormat`if (foo) { foo(); }`,
+        output: 'foo?.()',
+        errors: [
+          {
+            messageId: 'preferOptionalChain',
+            suggestions: null,
+          },
+        ],
+      },
+      {
+        code: noFormat`if (foo) { foo[bar](); }`,
+        output: 'foo?.[bar]()',
+        errors: [
+          {
+            messageId: 'preferOptionalChain',
+            suggestions: null,
+          },
+        ],
+      },
+      {
+        code: noFormat`if (foo[bar]) { foo[bar].baz(); }`,
+        output: 'foo[bar]?.baz()',
+        errors: [
+          {
+            messageId: 'preferOptionalChain',
+            suggestions: null,
+          },
+        ],
+      },
+      {
+        code: noFormat`if (foo.bar.baz()) { foo.bar.baz().bazz(); }`,
+        output: 'foo.bar.baz()?.bazz()',
+        errors: [
+          {
+            messageId: 'preferOptionalChain',
+            suggestions: null,
+          },
+        ],
+      },
+    ],
+  });
+});
+
 describe('hand-crafted cases', () => {
   ruleTester.run('prefer-optional-chain', rule, {
     valid: [
@@ -748,7 +806,7 @@ describe('hand-crafted cases', () => {
       'foo === 1 && foo.toFixed();',
       // call arguments are considered
       'foo.bar(a) && foo.bar(a, b).baz;',
-      // type parameters are considered
+      // type arguments are considered
       'foo.bar<a>() && foo.bar<a, b>().baz;',
       // array elements are considered
       '[1, 2].length && [1, 2, 3].length.toFixed();',
@@ -981,6 +1039,35 @@ describe('hand-crafted cases', () => {
         !x || x.a;
       `,
       "typeof globalThis !== 'undefined' && globalThis.Array();",
+      // https://github.com/typescript-eslint/typescript-eslint/issues/8380
+      `
+        const a = null;
+        const b = 0;
+        a === undefined || b === null || b === undefined;
+      `,
+      // https://github.com/typescript-eslint/typescript-eslint/issues/8380
+      `
+        const a = 0;
+        const b = 0;
+        a === undefined || b === undefined || b === null;
+      `,
+      // https://github.com/typescript-eslint/typescript-eslint/issues/8380
+      `
+        const a = 0;
+        const b = 0;
+        b === null || a === undefined || b === undefined;
+      `,
+      // https://github.com/typescript-eslint/typescript-eslint/issues/8380
+      `
+        const b = 0;
+        b === null || b === undefined;
+      `,
+      // https://github.com/typescript-eslint/typescript-eslint/issues/8380
+      `
+        const a = 0;
+        const b = 0;
+        b != null && a !== null && a !== undefined;
+      `,
     ],
     invalid: [
       // two  errors
@@ -1137,7 +1224,7 @@ describe('hand-crafted cases', () => {
           },
         ],
       },
-      // type parameters are considered
+      // type arguments are considered
       {
         code: 'foo && foo<string>() && foo<string>().bar;',
         output: 'foo?.<string>()?.bar;',

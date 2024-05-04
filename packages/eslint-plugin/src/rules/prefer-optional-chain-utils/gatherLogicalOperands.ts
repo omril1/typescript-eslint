@@ -52,6 +52,7 @@ export interface ValidOperand {
   comparisonType: NullishComparisonType;
   isYoda: boolean;
   node: TSESTree.Expression;
+  startsWithIfStatment?: boolean;
 }
 export interface InvalidOperand {
   type: OperandValidity.Invalid;
